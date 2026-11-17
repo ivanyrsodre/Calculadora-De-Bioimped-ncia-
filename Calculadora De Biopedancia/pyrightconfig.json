@@ -1,0 +1,13 @@
+{
+  "include": ["app.py", "corpofit", "tests"],
+  "exclude": ["**/__pycache__", "instance"],
+  "pythonVersion": "3.12",
+  "pythonPlatform": "Linux",
+  "typeCheckingMode": "basic",
+  "executionEnvironments": [
+    {
+      "root": ".",
+      "extraPaths": ["."]
+    }
+  ]
+}

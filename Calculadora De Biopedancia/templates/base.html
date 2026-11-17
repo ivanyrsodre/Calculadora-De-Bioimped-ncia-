@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="pt-BR" data-theme="light">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#f5f6fb">
+  <title>{% block title %}CorpoFit — composição corporal{% endblock %}</title>
+  <script>
+    try {
+      const savedTheme = localStorage.getItem('corpofit-theme');
+      const preferredTheme = savedTheme || (matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+      document.documentElement.dataset.theme = preferredTheme;
+    } catch (_) {}
+  </script>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/app.css') }}">
+  <script src="{{ url_for('static', filename='js/app.js') }}" defer></script>
+</head>
+<body>
+  <a class="skip-link" href="#conteudo">Pular para o conteúdo</a>
+  <header class="topbar">
+    <a class="brand" href="{{ url_for('main.index') }}" aria-label="CorpoFit, página inicial">
+      <span class="brand-mark" aria-hidden="true"><i></i><i></i></span>
+      <span>Corpo<span class="brand-accent">Fit</span></span>
+    </a>
+    <nav class="topnav" aria-label="Navegação principal">
+      <a href="{{ url_for('main.index') }}#calculadora">Calculadora</a>
+      <a href="{{ url_for('main.index') }}#historico">Histórico e análise</a>
+    </nav>
+    <button class="theme-toggle" type="button" id="themeToggle" aria-label="Ativar modo noturno" title="Alternar tema">
+      <span class="theme-icon" aria-hidden="true">◐</span><span class="theme-label">Modo noturno</span>
+    </button>
+  </header>
+
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+      <div class="flash-stack" role="status" aria-live="polite">
+        {% for category, message in messages %}<div class="flash flash-{{ category }}">{{ message }}</div>{% endfor %}
+      </div>
+    {% endif %}
+  {% endwith %}
+
+  <main id="conteudo" class="page-shell">
+    {% block content %}{% endblock %}
+  </main>
+  <footer class="site-footer">
+    <span>CorpoFit · estimativas para acompanhamento, não diagnóstico.</span>
+    <a href="{{ url_for('main.index') }}#metodos">Como interpretar</a>
+  </footer>
+</body>
+</html>

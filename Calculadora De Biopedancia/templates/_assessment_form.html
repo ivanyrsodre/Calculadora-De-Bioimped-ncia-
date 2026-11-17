@@ -1,0 +1,135 @@
+{% set selected_method = form_data.get('method', evaluation.method if evaluation else 'navy') %}
+{% set selected_profile_value = form_data.get('profile_id', selected_profile.id if selected_profile else '') %}
+<form class="assessment-form" method="post" action="{{ form_action }}" id="assessmentForm" data-returned="{{ 'true' if form_data else 'false' }}" novalidate>
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+  <div class="privacy-warning" role="note"><strong>Privacidade:</strong> na prévia hospedada, os registros ficam no SQLite deste ambiente, não no seu telefone. Para medições reais, rode a aplicação localmente e prefira apelidos.</div>
+  {% if is_edit %}
+    <input type="hidden" name="profile_id" value="{{ evaluation.profile_id }}">
+    <div class="locked-profile"><span class="field-label">Perfil</span><strong>{{ evaluation.profile_name }}</strong><span class="muted">{{ 'Equação masculina' if evaluation.sex == 'male' else 'Equação feminina' }}</span></div>
+  {% else %}
+    <div class="field-block">
+      <label for="profileSelect">Perfil da avaliação</label>
+      <select id="profileSelect" name="profile_id" required>
+        <option value="" {% if not selected_profile_value %}selected{% endif %}>Selecione um perfil</option>
+        {% for profile in profiles %}
+          <option value="{{ profile.id }}" data-sex="{{ profile.sex }}" {% if selected_profile_value|string == profile.id|string %}selected{% endif %}>{{ profile.name }}</option>
+        {% endfor %}
+        <option value="__new__" {% if selected_profile_value == '__new__' %}selected{% endif %}>＋ Criar novo perfil</option>
+      </select>
+    </div>
+    <div class="new-profile-fields" id="newProfileFields" {% if selected_profile_value != '__new__' %}hidden{% endif %}>
+      <div class="field-block">
+        <label for="newProfileName">Nome ou apelido</label>
+        <input id="newProfileName" name="new_profile_name" type="text" maxlength="80" autocomplete="off" value="{{ form_data.get('new_profile_name', '') }}" placeholder="Ex.: Ana M.">
+      </div>
+      <div class="field-block">
+        <label for="profileSex">Equação antropométrica</label>
+        <select id="profileSex" name="profile_sex">
+          <option value="female" {% if form_data.get('profile_sex') == 'female' %}selected{% endif %}>Feminina</option>
+          <option value="male" {% if form_data.get('profile_sex') == 'male' %}selected{% endif %}>Masculina</option>
+        </select>
+        <small>Escolha conforme a equação que será usada nos protocolos; isso não representa identidade de gênero.</small>
+      </div>
+    </div>
+  {% endif %}
+
+  <div class="field-block">
+    <label for="method">Protocolo de avaliação</label>
+    <select id="method" name="method" required>
+      <option value="navy" {% if selected_method == 'navy' %}selected{% endif %}>Circunferências — Marinha dos EUA</option>
+      <option value="jp3" {% if selected_method == 'jp3' %}selected{% endif %}>Dobras cutâneas — Jackson–Pollock (3 sítios)</option>
+      <option value="jp7" {% if selected_method == 'jp7' %}selected{% endif %}>Dobras cutâneas — Jackson–Pollock (7 sítios)</option>
+    </select>
+    <small>Unidades usadas: peso em kg, estatura e circunferências em cm, dobras em mm.</small>
+  </div>
+
+  <div class="form-row two-cols">
+    <div class="field-block">
+      <label for="age">Idade <span>anos</span></label>
+      <input id="age" name="age" type="number" min="18" max="100" step="1" inputmode="numeric" required value="{{ form_data.get('age', evaluation.age if evaluation else '') }}" placeholder="Ex.: 32">
+    </div>
+    <div class="field-block">
+      <label for="assessedAt">Data da avaliação</label>
+      <input id="assessedAt" name="assessed_at" type="date" max="{{ today if today is defined else '' }}" required value="{{ form_data.get('assessed_at', evaluation.assessed_at if evaluation else today) }}">
+    </div>
+  </div>
+
+  <div class="form-row two-cols">
+    <div class="field-block">
+      <label for="weight">Peso <span>kg</span></label>
+      <input id="weight" name="weight" type="number" min="25" max="350" step="any" inputmode="decimal" required value="{{ form_data.get('weight', (evaluation.weight_kg|round(1)) if evaluation else '') }}" placeholder="Ex.: 72,5">
+    </div>
+    <div class="field-block">
+      <label for="height">Altura <span>cm</span></label>
+      <input id="height" name="height" type="number" min="120" max="230" step="any" inputmode="decimal" required value="{{ form_data.get('height', (evaluation.height_cm|round(1)) if evaluation else '') }}" placeholder="Ex.: 170">
+    </div>
+  </div>
+
+  <div class="measure-section" id="navyFields">
+    <div class="section-heading"><span class="step-index">01</span><div><h3>Circunferências</h3><p>Use uma fita métrica flexível, sem comprimir a pele.</p></div></div>
+    <div class="form-row two-cols">
+      <div class="field-block method-field" data-method-sex="navy:male navy:female">
+        <label for="waist">Abdômen / cintura <span>cm</span></label>
+        <input id="waist" name="waist" type="number" min="25" max="200" step="any" inputmode="decimal" value="{{ form_data.get('waist', (evaluation.waist_cm|round(1)) if evaluation and evaluation.waist_cm else '') }}" placeholder="Ex.: 82">
+      </div>
+      <div class="field-block method-field" data-method-sex="navy:male navy:female">
+        <label for="neck">Pescoço <span>cm</span></label>
+        <input id="neck" name="neck" type="number" min="15" max="80" step="any" inputmode="decimal" value="{{ form_data.get('neck', (evaluation.neck_cm|round(1)) if evaluation and evaluation.neck_cm else '') }}" placeholder="Ex.: 36">
+      </div>
+      <div class="field-block method-field" data-method-sex="navy:female">
+        <label for="hip">Quadril <span>cm</span></label>
+        <input id="hip" name="hip" type="number" min="30" max="220" step="any" inputmode="decimal" value="{{ form_data.get('hip', (evaluation.hip_cm|round(1)) if evaluation and evaluation.hip_cm else '') }}" placeholder="Ex.: 98">
+      </div>
+    </div>
+    <details class="measurement-help">
+      <summary>Como medir as circunferências</summary>
+      <div class="help-copy"><p><strong>Equação masculina:</strong> meça o abdômen na altura do umbigo e o pescoço logo abaixo da laringe.</p><p><strong>Equação feminina:</strong> meça cintura no ponto mais estreito, quadril na maior circunferência dos glúteos e pescoço logo abaixo da laringe. Use os mesmos pontos nas próximas avaliações.</p></div>
+    </details>
+  </div>
+
+  <div class="measure-section" id="skinfoldFields" hidden>
+    <div class="section-heading"><span class="step-index">02</span><div><h3>Dobras cutâneas</h3><p>Informe cada medida em milímetros (mm) com adipômetro.</p></div></div>
+    <div class="form-row two-cols">
+      <div class="field-block method-field" data-method-sex="jp3:male jp7:male jp7:female">
+        <label for="skinfoldChest">Peitoral <span>mm</span></label>
+        <input id="skinfoldChest" name="skinfold_chest" type="number" min="2" max="100" step="any" inputmode="decimal" value="{{ form_data.get('skinfold_chest', (evaluation.skinfold_chest_mm|round(1)) if evaluation and evaluation.skinfold_chest_mm else '') }}" placeholder="Ex.: 12">
+      </div>
+      <div class="field-block method-field" data-method-sex="jp7:male jp7:female">
+        <label for="skinfoldMidaxillary">Axilar média <span>mm</span></label>
+        <input id="skinfoldMidaxillary" name="skinfold_midaxillary" type="number" min="2" max="100" step="any" inputmode="decimal" value="{{ form_data.get('skinfold_midaxillary', (evaluation.skinfold_midaxillary_mm|round(1)) if evaluation and evaluation.skinfold_midaxillary_mm else '') }}" placeholder="Ex.: 10">
+      </div>
+      <div class="field-block method-field" data-method-sex="jp3:female jp7:male jp7:female">
+        <label for="skinfoldTriceps">Tricipital <span>mm</span></label>
+        <input id="skinfoldTriceps" name="skinfold_triceps" type="number" min="2" max="100" step="any" inputmode="decimal" value="{{ form_data.get('skinfold_triceps', (evaluation.skinfold_triceps_mm|round(1)) if evaluation and evaluation.skinfold_triceps_mm else '') }}" placeholder="Ex.: 14">
+      </div>
+      <div class="field-block method-field" data-method-sex="jp7:male jp7:female">
+        <label for="skinfoldSubscapular">Subescapular <span>mm</span></label>
+        <input id="skinfoldSubscapular" name="skinfold_subscapular" type="number" min="2" max="100" step="any" inputmode="decimal" value="{{ form_data.get('skinfold_subscapular', (evaluation.skinfold_subscapular_mm|round(1)) if evaluation and evaluation.skinfold_subscapular_mm else '') }}" placeholder="Ex.: 14">
+      </div>
+      <div class="field-block method-field" data-method-sex="jp3:male jp7:male jp7:female">
+        <label for="skinfoldAbdomen">Abdominal <span>mm</span></label>
+        <input id="skinfoldAbdomen" name="skinfold_abdomen" type="number" min="2" max="100" step="any" inputmode="decimal" value="{{ form_data.get('skinfold_abdomen', (evaluation.skinfold_abdomen_mm|round(1)) if evaluation and evaluation.skinfold_abdomen_mm else '') }}" placeholder="Ex.: 20">
+      </div>
+      <div class="field-block method-field" data-method-sex="jp3:female jp7:male jp7:female">
+        <label for="skinfoldSuprailiac">Supra-ilíaca <span>mm</span></label>
+        <input id="skinfoldSuprailiac" name="skinfold_suprailiac" type="number" min="2" max="100" step="any" inputmode="decimal" value="{{ form_data.get('skinfold_suprailiac', (evaluation.skinfold_suprailiac_mm|round(1)) if evaluation and evaluation.skinfold_suprailiac_mm else '') }}" placeholder="Ex.: 12">
+      </div>
+      <div class="field-block method-field" data-method-sex="jp3:male jp3:female jp7:male jp7:female">
+        <label for="skinfoldThigh">Coxa <span>mm</span></label>
+        <input id="skinfoldThigh" name="skinfold_thigh" type="number" min="2" max="100" step="any" inputmode="decimal" value="{{ form_data.get('skinfold_thigh', (evaluation.skinfold_thigh_mm|round(1)) if evaluation and evaluation.skinfold_thigh_mm else '') }}" placeholder="Ex.: 18">
+      </div>
+    </div>
+    <details class="measurement-help">
+      <summary>Locais das dobras por equação</summary>
+      <div class="help-copy"><p><strong>Jackson–Pollock 3 sítios masculino:</strong> peitoral, abdominal e coxa. <strong>Feminino:</strong> tricipital, supra-ilíaca e coxa.</p><p><strong>Jackson–Pollock 7 sítios, ambos os sexos:</strong> peitoral, axilar média, tricipital, subescapular, abdominal, supra-ilíaca e coxa. Colete as dobras no lado direito do corpo, com adipômetro e técnica padronizada. Os pontos anatômicos e o pinçamento influenciam a medida; se não tiver treinamento, procure um profissional.</p></div>
+    </details>
+  </div>
+
+  <div class="form-error-list" id="clientErrors" hidden role="alert"></div>
+  {% for error in errors %}<div class="form-error" role="alert">{{ error }}</div>{% endfor %}
+  <div class="form-actions">
+    <button class="button button-primary" type="submit">{{ 'Atualizar avaliação' if is_edit else 'Calcular e salvar avaliação' }} <span aria-hidden="true">→</span></button>
+    {% if is_edit %}<a class="button button-subtle" href="{{ url_for('main.index', profile_id=evaluation.profile_id) }}">Cancelar</a>{% endif %}
+  </div>
+  <p class="privacy-note"><span aria-hidden="true">⌁</span> Sem serviços externos para os registros; o banco fica no ambiente onde o aplicativo está executando.</p>
+</form>

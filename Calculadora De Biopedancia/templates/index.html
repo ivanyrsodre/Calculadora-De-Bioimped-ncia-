@@ -1,0 +1,87 @@
+{% extends 'base.html' %}
+{% block title %}CorpoFit — calculadora de composição corporal{% endblock %}
+{% block content %}
+{% set result = selected_assessment or latest %}
+<section class="page-intro">
+  <div class="intro-copy"><div class="eyebrow"><span class="eyebrow-dot"></span> AVALIAÇÃO CORPORAL · SIMPLES E TRANSPARENTE</div><h1>Composição corporal,<br><em>em perspectiva.</em></h1><p>Estime, registre e acompanhe mudanças usando protocolos de circunferências ou dobras cutâneas.</p></div>
+  <div class="intro-aside"><span class="intro-number">01 <i>/ 03</i></span><span>Medir · Interpretar · Acompanhar</span></div>
+</section>
+
+<section class="workspace" id="calculadora" aria-label="Calculadora de composição corporal">
+  <div class="panel form-panel">
+    <div class="panel-heading"><div><span class="eyebrow">NOVA AVALIAÇÃO</span><h2>Dados da avaliação</h2></div><span class="panel-mark">A</span></div>
+    {% include '_assessment_form.html' %}
+  </div>
+
+  <aside class="result-panel" id="resultado" aria-live="polite">
+    <div class="result-topline"><span class="eyebrow">{{ 'RESULTADO DA AVALIAÇÃO' if result else 'SEU RESUMO' }}</span><span class="live-badge"><i></i> {{ 'Salvo' if selected_assessment else ('Último registro' if latest else 'Pronto') }}</span></div>
+    {% if result %}
+      <div class="result-gauge" style="--gauge-value: {{ [result.body_fat_pct, 100]|min }};">
+        <div class="gauge-core"><strong>{{ '%.1f'|format(result.body_fat_pct) }}<small>%</small></strong><span>gordura corporal</span></div>
+      </div>
+      <div class="result-category"><span class="category-dot"></span><span>{{ result.body_fat_category }}</span></div>
+      <p class="result-method">{{ result.method_label }}</p>
+      <div class="result-stats">
+        <div><span>Densidade corporal</span><strong>{{ '%.4f'|format(result.body_density) }} <small>kg/L</small></strong></div>
+        <div><span>Massa de gordura</span><strong>{{ '%.1f'|format(result.fat_mass_kg) }} <small>kg</small></strong></div>
+        <div><span>Massa livre de gordura</span><strong>{{ '%.1f'|format(result.lean_mass_kg) }} <small>kg</small></strong></div>
+        <div><span>IMC <i class="info-dot" title="O IMC não mede gordura diretamente.">i</i></span><strong>{{ '%.1f'|format(result.bmi) }} <small>{{ result.bmi_category }}</small></strong></div>
+        {% if result.waist_height_ratio %}<div><span>Razão cintura/estatura</span><strong>{{ '%.2f'|format(result.waist_height_ratio) }}</strong></div>{% endif %}
+      </div>
+      {% if result.warnings %}<div class="result-note"><strong>Para interpretar</strong>{% for warning in result.warnings %}<p>{{ warning }}</p>{% endfor %}</div>{% endif %}
+      <div class="result-actions"><a class="text-link" href="{{ url_for('main.print_evaluation', evaluation_id=result.id) if result.id else '#' }}" {% if not result.id %}aria-disabled="true"{% endif %}>Imprimir relatório <span aria-hidden="true">↗</span></a><span>{{ result.assessed_at if result.assessed_at else today }}</span></div>
+    {% else %}
+      <div class="empty-result"><div class="empty-orbit"><span></span></div><h3>Seu resultado começa com uma medida.</h3><p>Escolha um perfil e preencha o protocolo. O resumo aparece aqui com as contas e a interpretação.</p><div class="empty-hint"><strong>O que você verá</strong><span>Percentual estimado · densidade · composição em kg</span></div></div>
+    {% endif %}
+  </aside>
+</section>
+
+<section class="analysis-section" id="historico">
+  <div class="section-header"><div><span class="eyebrow">ACOMPANHAMENTO</span><h2>Histórico e análise</h2><p>Compare medidas feitas com o mesmo protocolo para observar tendências.</p></div><div class="analysis-tools">
+    <form method="get" action="{{ url_for('main.index') }}#historico" class="filter-form">
+      <label class="visually-hidden" for="historyProfile">Filtrar histórico por perfil</label>
+      <select id="historyProfile" name="profile_id" onchange="this.form.submit()"><option value="">Todos os perfis</option>{% for profile in profiles %}<option value="{{ profile.id }}" {% if selected_profile and selected_profile.id == profile.id %}selected{% endif %}>{{ profile.name }}</option>{% endfor %}</select>
+    </form>
+    <a class="button button-outline button-small" href="{{ url_for('main.export_csv', profile_id=selected_profile.id if selected_profile else none) }}">Exportar CSV <span aria-hidden="true">↓</span></a>
+  </div></div>
+
+  <div class="insight-strip">
+    <div class="insight-block"><span class="insight-label">AVALIAÇÕES REGISTRADAS</span><strong>{{ evaluations|length }}<small> {{ 'neste perfil' if selected_profile else 'no histórico' }}</small></strong></div>
+    <div class="insight-block"><span class="insight-label">VARIAÇÃO DO % DE GORDURA</span><strong>{% if change is not none %}{{ '+' if change > 0 else '' }}{{ '%.1f'|format(change) }}<small> p.p. entre os dois registros recentes</small>{% else %}—<small> exige dois registros do mesmo protocolo</small>{% endif %}</strong></div>
+    <div class="insight-context"><span class="context-icon">↗</span><p>Uma medida isolada não mostra tendência. Padronize horário, técnica e protocolo em cada avaliação.</p></div>
+  </div>
+
+  <div class="chart-grid">
+    <article class="chart-card"><div class="chart-title"><div><h3>Percentual de gordura</h3><span>Estimativa ao longo do tempo</span></div><span class="chart-unit">%</span></div><div id="fatChart" class="chart-canvas" aria-label="Gráfico de percentual de gordura"></div><p class="chart-caption" id="fatChartCaption">As datas são ordenadas da mais antiga para a mais recente.</p></article>
+    <article class="chart-card"><div class="chart-title"><div><h3>Peso corporal</h3><span>Medidas registradas no histórico</span></div><span class="chart-unit">kg</span></div><div id="weightChart" class="chart-canvas" aria-label="Gráfico de peso corporal"></div><p class="chart-caption">Peso apresentado em quilogramas, independentemente da unidade usada no formulário.</p></article>
+    <article class="chart-card"><div class="chart-title"><div><h3>Massa livre de gordura</h3><span>Estimativa ao longo do tempo</span></div><span class="chart-unit">kg</span></div><div id="leanChart" class="chart-canvas" aria-label="Gráfico de massa livre de gordura"></div><p class="chart-caption">Estimativa calculada a partir do percentual de gordura e do peso de cada avaliação.</p></article>
+  </div>
+
+  <div class="history-card">
+    <div class="history-heading"><div><h3>Registros recentes</h3><span>Dados no SQLite da instância atual; na prévia, ficam no ambiente hospedado</span></div><span class="count-pill">{{ evaluations|length }} itens</span></div>
+    {% if evaluations %}
+      <div class="table-scroll"><table class="history-table"><thead><tr><th>Perfil</th><th>Data</th><th>Método</th><th>Gordura</th><th>Peso</th><th aria-label="Ações"></th></tr></thead><tbody>
+      {% for evaluation in evaluations %}
+        <tr>
+          <td><span class="profile-cell"><i>{{ evaluation.profile_name[:1]|upper }}</i>{{ evaluation.profile_name }}</span></td>
+          <td>{{ evaluation.assessed_at }}</td>
+          <td><span class="method-pill">{{ 'Circunferências' if evaluation.method == 'navy' else ('Jackson–Pollock 3' if evaluation.method == 'jp3' else 'Jackson–Pollock 7') }}</span></td>
+          <td class="strong-cell">{{ '%.1f'|format(evaluation.body_fat_pct) }}%</td><td>{{ '%.1f'|format(evaluation.weight_kg) }} kg</td>
+          <td class="row-actions"><a href="{{ url_for('main.index', profile_id=evaluation.profile_id, avaliacao=evaluation.id) }}#resultado" title="Ver resultado" aria-label="Ver avaliação de {{ evaluation.profile_name }} em {{ evaluation.assessed_at }}">Ver</a><a href="{{ url_for('main.edit_evaluation', evaluation_id=evaluation.id) }}" title="Editar avaliação">Editar</a><form method="post" action="{{ url_for('main.delete_evaluation', evaluation_id=evaluation.id) }}" data-confirm="Excluir esta avaliação do histórico?"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button type="submit" title="Excluir avaliação">Excluir</button></form></td>
+        </tr>
+      {% endfor %}
+      </tbody></table></div>
+    {% else %}
+      <div class="history-empty"><span aria-hidden="true">○</span><p>Ainda não há avaliações para mostrar. Salve a primeira pela calculadora acima.</p></div>
+    {% endif %}
+  </div>
+</section>
+
+<section class="method-section" id="metodos">
+  <div class="method-intro"><span class="eyebrow">TRANSPARÊNCIA</span><h2>O número vem com contexto.</h2><p>Protocolos de campo estimam composição corporal; eles não substituem avaliação clínica ou métodos de referência.</p></div>
+  <div class="method-cards"><article><span class="method-number">01</span><h3>Circunferências</h3><p>Equações Navy usam altura e circunferências diferentes conforme a equação masculina ou feminina. A densidade é estimada pela relação inversa de Siri após calcular o percentual.</p></article><article><span class="method-number">02</span><h3>Dobras cutâneas</h3><p>Jackson–Pollock permite protocolos de 3 e 7 sítios. A soma das dobras em milímetros e a idade estimam densidade corporal; Siri converte densidade em percentual.</p></article><article><span class="method-number">03</span><h3>IMC complementar</h3><p>O IMC relaciona peso e altura, mas não distingue gordura, músculo e osso. Considere-o junto de outras informações, não como composição corporal direta.</p></article></div>
+  <details class="formula-details"><summary>Ver as equações utilizadas (todas em unidades métricas)</summary><div class="formula-content"><p><strong>Navy · masculina:</strong> BF% = 86,010 × log₁₀[(abdômen − pescoço) em cm] − 70,041 × log₁₀[altura em cm] + 30,2952104.</p><p><strong>Navy · feminina:</strong> BF% = 163,205 × log₁₀[(cintura + quadril − pescoço) em cm] − 97,684 × log₁₀[altura em cm] − 104,9121099. Estas são formas algébricas equivalentes reescritas para cm; a densidade é derivada por D = 495 ÷ (BF% + 450).</p><p><strong>Jackson–Pollock 3 sítios:</strong> densidade masculina = 1,10938 − 0,0008267S + 0,0000016S² − 0,0002574 × idade. Densidade feminina = 1,0994921 − 0,0009929S + 0,0000023S² − 0,0001392 × idade.</p><p><strong>Jackson–Pollock 7 sítios:</strong> densidade masculina = 1,112 − 0,00043499S + 0,00000055S² − 0,00028826 × idade. Densidade feminina = 1,097 − 0,00046971S + 0,00000056S² − 0,00012828 × idade. Para JP3 e JP7, S é a soma das dobras requeridas em mm; Siri: BF% = 495 ÷ densidade − 450.</p><p class="formula-sources">Fontes: <a href="https://pmc.ncbi.nlm.nih.gov/articles/PMC6650177/" target="_blank" rel="noreferrer">equações Navy</a> · <a href="https://www.topendsports.com/testing/density-jackson-pollock.htm" target="_blank" rel="noreferrer">fórmulas e sítios de 3/7 dobras</a> · <a href="https://pubmed.ncbi.nlm.nih.gov/718832/" target="_blank" rel="noreferrer">estudo original masculino</a> · <a href="https://pubmed.ncbi.nlm.nih.gov/7402053/" target="_blank" rel="noreferrer">estudo original feminino</a> · <a href="https://pmc.ncbi.nlm.nih.gov/articles/PMC2891061/" target="_blank" rel="noreferrer">limitações das equações Jackson–Pollock</a> · <a href="https://www.cdc.gov/bmi/about/index.html" target="_blank" rel="noreferrer">limitações do IMC</a>.</p></div></details>
+  <div class="disclaimer-bar"><span class="disclaimer-mark">i</span><p>As faixas são referências gerais para adultos, não metas individuais nem diagnósticos. A técnica, a idade e a população influenciam o resultado. <a href="https://www.acefitness.org/about-ace/press-room/in-the-news/8602/body-fat-percentage-charting-averages-in-men-and-women-very-well-health/" target="_blank" rel="noreferrer">Consulte a referência ACE</a>. Em caso de dúvida, converse com um profissional.</p></div>
+</section>
+<script type="application/json" id="historyData">{{ chart_data|tojson }}</script>
+{% endblock %}

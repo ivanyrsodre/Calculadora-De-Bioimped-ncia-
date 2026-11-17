@@ -1,0 +1,13 @@
+{% extends 'base.html' %}
+{% block title %}Relatório de avaliação — CorpoFit{% endblock %}
+{% block content %}
+<article class="report-sheet">
+  <div class="report-actions no-print"><a class="back-link" href="{{ url_for('main.index', profile_id=evaluation.profile_id, avaliacao=evaluation.id) }}#resultado">← Voltar à avaliação</a><button class="button button-primary" type="button" onclick="window.print()">Imprimir / salvar PDF</button></div>
+  <header class="report-header"><div class="brand"><span class="brand-mark" aria-hidden="true"><i></i><i></i></span><span>Corpo<span class="brand-accent">Fit</span></span></div><span class="report-date">{{ evaluation.assessed_at }}</span></header>
+  <div class="report-title"><span class="eyebrow">RELATÓRIO DE COMPOSIÇÃO CORPORAL</span><h1>{{ evaluation.profile_name }}</h1><p>{{ evaluation.method_label if evaluation.method_label is defined else ('Circunferências da Marinha dos EUA' if evaluation.method == 'navy' else ('Jackson–Pollock de 3 sítios + Siri' if evaluation.method == 'jp3' else 'Jackson–Pollock de 7 sítios + Siri')) }} · idade {{ evaluation.age }} anos</p></div>
+  <div class="report-hero"><div><span>Percentual de gordura estimado</span><strong>{{ '%.1f'|format(evaluation.body_fat_pct) }}%</strong><small>{{ 'Faixa orientativa: ' }}{{ evaluation.body_fat_category if evaluation.body_fat_category is defined else '' }}</small></div><div class="report-density"><span>Densidade corporal</span><strong>{{ '%.4f'|format(evaluation.body_density) }} kg/L</strong></div></div>
+  <div class="report-metrics"><div><span>Peso</span><strong>{{ '%.1f'|format(evaluation.weight_kg) }} kg</strong></div><div><span>Altura</span><strong>{{ '%.1f'|format(evaluation.height_cm) }} cm</strong></div><div><span>Massa de gordura</span><strong>{{ '%.1f'|format(evaluation.fat_mass_kg) }} kg</strong></div><div><span>Massa livre de gordura</span><strong>{{ '%.1f'|format(evaluation.lean_mass_kg) }} kg</strong></div><div><span>IMC complementar</span><strong>{{ '%.1f'|format(evaluation.bmi) }}</strong></div></div>
+  <section class="report-note"><h2>Como interpretar</h2><p>Este resultado é uma estimativa obtida por equação antropométrica. Não é diagnóstico e pode divergir de métodos de referência. O IMC não mede gordura diretamente. Para comparar avaliações, padronize a técnica e utilize o mesmo protocolo.</p></section>
+  <footer class="report-footer">Gerado pelo CorpoFit · os dados permanecem no banco SQLite local do computador onde a avaliação foi registrada.</footer>
+</article>
+{% endblock %}

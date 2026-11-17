@@ -1,0 +1,11 @@
+{% extends 'base.html' %}
+{% block title %}Editar avaliação — CorpoFit{% endblock %}
+{% block content %}
+<section class="edit-page">
+  <a class="back-link" href="{{ url_for('main.index', profile_id=evaluation.profile_id) }}#historico">← Voltar ao histórico</a>
+  <div class="edit-heading"><span class="eyebrow">REGISTRO {{ evaluation.assessed_at }}</span><h1>Editar avaliação</h1><p>Perfil: <strong>{{ evaluation.profile_name }}</strong>. Os resultados serão recalculados ao salvar.</p></div>
+  <div class="panel form-panel edit-panel">
+    {% include '_assessment_form.html' %}
+  </div>
+</section>
+{% endblock %}
